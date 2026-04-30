@@ -22,10 +22,15 @@ export default function MultimodalInput() {
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!text.trim() && images.length === 0) return;
-    // Send message via IPC - will be connected in Task 9
-    console.log('Send:', { text, images });
+    const msgId = `msg_${Date.now()}`;
+    await window.ipc.sendMessage({
+      type: images.length > 0 ? 'image_chat' : 'chat',
+      id: msgId,
+      content: text,
+      images,
+    });
     setText('');
     setImages([]);
   };
