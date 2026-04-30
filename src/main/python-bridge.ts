@@ -1,7 +1,7 @@
 import { spawn, ChildProcess } from 'child_process';
 import { WebSocketServer, WebSocket } from 'ws';
 
-interface PythonBridge {
+interface IPythonBridge {
   start: () => Promise<void>;
   stop: () => Promise<void>;
   send: (message: object) => void;
@@ -64,7 +64,7 @@ export class PythonBridge {
     });
   }
 
-  async stop(): void {
+  async stop(): Promise<void> {
     this.wsClients.forEach((ws) => ws.close());
     this.wsServer?.close();
     this.pythonProcess?.kill();
