@@ -2,7 +2,11 @@ import React from 'react';
 import { useSettingsStore } from '@/store/settingsStore';
 import ShortcutPanel from './ShortcutPanel';
 
-export default function TopBar() {
+interface TopBarProps {
+  onSettingsClick?: () => void;
+}
+
+export default function TopBar({ onSettingsClick }: TopBarProps) {
   const { theme, toggleTheme } = useSettingsStore();
 
   return (
@@ -34,6 +38,7 @@ export default function TopBar() {
 
         {/* Settings */}
         <button
+          onClick={onSettingsClick}
           className="w-8 h-8 rounded-lg hover:bg-[var(--bg-secondary)] flex items-center justify-center transition-colors"
           title="设置"
         >
