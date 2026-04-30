@@ -1,0 +1,6 @@
+[submodule "src/mini-agent"]
+	path = src/mini-agent
+	url = https://github.com/MiniMax-AI/Mini-Agent.git
+[submodule "src/cli"]
+	path = src/cli
+	url = https://github.com/MiniMax-AI/cli.git

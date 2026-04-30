@@ -17,7 +17,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set, get) => ({
       theme: 'light',
       sidebarExpanded: false,
-      apiKey: process.env.MINIMAX_API_KEY || '',
+      apiKey: import.meta.env.VITE_MINIMAX_API_KEY as string || '',
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => set({ theme: get().theme === 'light' ? 'dark' : 'light' }),
       setSidebarExpanded: (expanded) => set({ sidebarExpanded: expanded }),

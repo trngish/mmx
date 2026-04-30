@@ -1,26 +1,14 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain } from 'electron'
 import path from 'path'
+import { PythonBridge } from './python-bridge'
+import { setupIpcHandlers } from './ipc-handlers'
 
-// PythonBridge placeholder - will be implemented in Task 8
-class PythonBridge {
-  async initialize(): Promise<void> {
-    console.log('PythonBridge.initialize called')
-  }
-
-  async sendMessage(channel: string, message: string): Promise<string> {
-    console.log('PythonBridge.sendMessage called', channel, message)
-    return ''
-  }
-
-  stop(): void {
-    console.log('PythonBridge.stop called')
-  }
-}
-
-const pythonBridge = new PythonBridge()
+let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
+let pythonBridge: PythonBridge | null = null
 
 function createWindow() {
-  const win = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
@@ -28,61 +16,69 @@ function createWindow() {
     frame: true,
     backgroundColor: '#ffffff',
     webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     }
   })
 
-  if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
-    win.loadURL('http://localhost:5173')
+  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173')
+    mainWindow.webContents.openDevTools()
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'))
+    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+
+  mainWindow.on('close', (event) => {
+    if (tray) {
+      event.preventDefault()
+      mainWindow?.hide()
+    }
+  })
+
+  mainWindow.on('closed', () => {
+    mainWindow = null
+  })
 }
 
 function createTray() {
   const icon = nativeImage.createEmpty()
-  const tray = new Tray(icon)
+  tray = new Tray(icon)
 
   const contextMenu = Menu.buildFromTemplate([
-    {
-      label: '显示窗口',
-      click: () => {
-        const win = BrowserWindow.getAllWindows()[0]
-        if (win) {
-          win.show()
-        }
-      }
-    },
-    {
-      label: '退出',
-      click: () => {
-        app.quit()
-      }
-    }
+    { label: '显示窗口', click: () => mainWindow?.show() },
+    { type: 'separator' },
+    { label: '退出', click: () => { tray = null; app.quit() } }
   ])
 
   tray.setToolTip('MiniMax Desktop')
   tray.setContextMenu(contextMenu)
+  tray.on('double-click', () => mainWindow?.show())
 }
 
-function setupIpcHandlers() {
-  // Will be implemented in Task 8
-  console.log('setupIpcHandlers called')
-}
+app.whenReady().then(async () => {
+  pythonBridge = new PythonBridge()
+  await pythonBridge.start()
 
-app.whenReady().then(() => {
+  setupIpcHandlers(ipcMain, pythonBridge, mainWindow)
   createWindow()
   createTray()
-  setupIpcHandlers()
-  pythonBridge.initialize()
-})
-
-app.on('before-quit', () => {
-  pythonBridge.stop()
 })
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow()
+  }
+})
+
+app.on('before-quit', async () => {
+  await pythonBridge?.stop()
 })

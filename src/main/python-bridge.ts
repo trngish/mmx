@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import { WebSocketServer, WebSocket } from 'ws';
+import path from 'path';
 
 interface IPythonBridge {
   start: () => Promise<void>;
@@ -16,12 +17,15 @@ export class PythonBridge {
   private pythonWsPort = 8765;
 
   async start(): Promise<void> {
-    // Start Python Mini-Agent subprocess
-    this.pythonProcess = spawn('python', ['-m', 'mini_agent'], {
-      cwd: 'D:\\MyWorkspace\\Mini-Agent',
+    // Start Python Mini-Agent subprocess in non-interactive mode
+    this.pythonProcess = spawn('python', ['-m', 'mini_agent.cli', '--task', 'echo "initialized"'], {
+      cwd: path.join(__dirname, '../../src/mini-agent'),
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         ...process.env,
+        PYTHONIOENCODING: 'utf-8',
+        PYTHONUNBUFFERED: '1',
+        TERM: 'xterm-256color',
         MINIMAX_API_KEY: process.env.MINIMAX_API_KEY || '',
       },
     });
@@ -31,11 +35,16 @@ export class PythonBridge {
     });
 
     this.pythonProcess.stderr?.on('data', (data: Buffer) => {
-      console.error('[Python stderr]:', data.toString());
+      console.log('[Python stderr]:', data.toString());
     });
 
     this.pythonProcess.on('error', (err) => {
       console.error('[Python process error]:', err);
+    });
+
+    this.pythonProcess.on('close', (code) => {
+      console.log(`[Python process closed] with code: ${code}`);
+      this.pythonProcess = null;
     });
 
     // Start WebSocket server to bridge to Python
