@@ -82,4 +82,18 @@ export class PythonBridge {
   onMessage(handler: (msg: object) => void): void {
     this.messageHandlers.push(handler);
   }
+
+  async executeMmxCommand(args: string[]): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const proc = spawn('mmx', args, { shell: true });
+      let stdout = '';
+      let stderr = '';
+      proc.stdout?.on('data', (d) => { stdout += d.toString(); });
+      proc.stderr?.on('data', (d) => { stderr += d.toString(); });
+      proc.on('close', (code) => {
+        if (code === 0) resolve(stdout);
+        else reject(new Error(`mmx exited ${code}: ${stderr}`));
+      });
+    });
+  }
 }
